@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outdoor Progression step picker</title>
+
+<!-- Inter matches Jotform's default form font so the field reads as part of the form -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<script src="https://js.jotform.com/JotFormCustomWidget.min.js"></script>
+
+<style>
+  :root {
+    --green: #00B451;        /* Girl Scouts green: the trail */
+    --forest: #005640;       /* selected blaze, selected name */
+    --wash: #EDF8F1;         /* selected row */
+    --covered: #CDEFDB;      /* steps below the selected one */
+    --ink: #1F2D26;
+    --muted: #55655D;
+    --rule: #CBD5CF;
+    --blaze-w: 30px;
+    --blaze-h: 34px;
+    --row-pad: 10px;
+    --gap: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: transparent;
+  }
+
+  body {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .trail {
+    margin: 0;
+    padding: 2px 2px 4px;
+    border: 0;
+    min-width: 0;
+  }
+
+  .hint {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* One step ----------------------------------------------------------- */
+
+  .step {
+    position: relative;
+    border-radius: 8px;
+  }
+
+  /* The trail line that runs through every blaze */
+  .step::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--row-pad) + var(--blaze-w) / 2 - 1px);
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--rule);
+  }
+  .step:first-child::before { top: calc(var(--row-pad) + var(--blaze-h) / 2); }
+  .step:last-child::before  { bottom: auto; height: calc(var(--row-pad) + var(--blaze-h) / 2); }
+
+  .step.is-covered::before { background: var(--green); }
+  .step.is-selected::before {
+    background: linear-gradient(
+      to bottom,
+      var(--green) 0,
+      var(--green) calc(var(--row-pad) + var(--blaze-h) / 2),
+      var(--rule) calc(var(--row-pad) + var(--blaze-h) / 2)
+    );
+  }
+  .step.is-selected:first-child::before { background: var(--rule); }
+  .step.is-selected:last-child::before  { background: var(--green); }
+
+  .step label {
+    display: grid;
+    grid-template-columns: var(--blaze-w) 1fr;
+    column-gap: var(--gap);
+    align-items: start;
+    padding: var(--row-pad);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .step label:hover { background: #F4F7F5; }
+  .step.is-selected,
+  .step.is-selected label:hover { background: var(--wash); }
+
+  .step input:focus-visible + label {
+    outline: 2px solid var(--forest);
+    outline-offset: 1px;
+  }
+
+  /* Blaze: the painted rectangle hikers follow on a trail */
+  .blaze {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: var(--blaze-w);
+    height: var(--blaze-h);
+    border: 2px solid var(--rule);
+    border-radius: 5px;
+    background: #fff;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1;
+    transition: background-color .15s, border-color .15s, color .15s;
+  }
+
+  .step.is-covered .blaze {
+    background: var(--covered);
+    border-color: var(--green);
+    color: var(--forest);
+  }
+
+  .step.is-selected .blaze {
+    background: var(--forest);
+    border-color: var(--forest);
+    color: #fff;
+  }
+
+  .name {
+    display: block;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .step.is-selected .name { color: var(--forest); }
+
+  .lead {
+    display: block;
+    margin-top: 1px;
+    color: var(--muted);
+  }
+  .step.is-selected .lead { color: var(--ink); }
+
+  /* Everything else the step covers; opens when the step is selected */
+  .details {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .2s ease;
+  }
+  .step.is-selected .details { grid-template-rows: 1fr; }
+
+  .details-inner {
+    overflow: hidden;
+    visibility: hidden;
+    transition: visibility 0s .2s;
+  }
+  .step.is-selected .details-inner {
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .details ul {
+    margin: 0;
+    padding: 0 var(--row-pad) 12px calc(var(--row-pad) + var(--blaze-w) + var(--gap) + 16px);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .details li { padding-left: 2px; }
+  .details li::marker { color: var(--green); }
+  .details li + li { margin-top: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .details, .details-inner, .blaze { transition: none; }
+  }
+</style>
+</head>
+
+<body>
+
+<fieldset class="trail" id="trail">
+  <legend class="visually-hidden">Outdoor Progression step</legend>
+  <p class="hint" id="hint">Select a step to see everything it covers.</p>
+  <div id="steps"></div>
+</fieldset>
+
+<script>
+  /* ------------------------------------------------------------------
+     EDIT HERE. Each step has a name, the one-line meaning that is always
+     visible, and the extra items shown once the step is selected.
+     Order in this list is the order on the form. Numbering starts at 0,
+     so the first entry saves as "0 - Starting Out".
+     ------------------------------------------------------------------ */
+  var STEPS = [
+    {
+      name: "Starting Out",
+      lead: "Our troop hasn't done any outdoor activities together yet.",
+      more: []
+    },
+    {
+      name: "Look Out",
+      lead: "Shared past experiences in the outdoors.",
+      more: [
+        "Talked about favorite outdoor places and why they're special.",
+        "Wondered what else can be seen in the outdoors."
+      ]
+    },
+    {
+      name: "Meet Out",
+      lead: "Stepped outside to look, listen, feel, and smell.",
+      more: [
+        "Shared what was observed.",
+        "Learned more about what was discovered."
+      ]
+    },
+    {
+      name: "Move Out",
+      lead: "Planned and took a short walk outside.",
+      more: [
+        "Discussed being prepared for the weather.",
+        "Did activities to explore nature.",
+        "Planned and carried out an indoor sleepover."
+      ]
+    },
+    {
+      name: "Explore Out",
+      lead: "Planned and took a short and easy hike.",
+      more: [
+        "Discussed what to take in a day pack.",
+        "Dressed for the weather.",
+        "Planned a healthy snack or lunch.",
+        "Learned how to stay safe in the outdoors."
+      ]
+    },
+    {
+      name: "Cook Out",
+      lead: "Planned and cooked a simple meal outdoors.",
+      more: [
+        "Made a list of gear and food supplies needed.",
+        "Learned and practiced skills needed to cook a meal.",
+        "Reviewed outdoor cooking safety.",
+        "Practiced hand and dish sanitation.",
+        "Created a Kaper Chart for the cookout."
+      ]
+    },
+    {
+      name: "Sleep Out",
+      lead: "Planned and carried out an overnight in a cabin or backyard.",
+      more: [
+        "Discussed what to pack for the sleep out.",
+        "Learned to use and care for camping gear.",
+        "Learned and practiced new outdoor skills.",
+        "Planned a menu with a new cooking skill.",
+        "Discussed campsite organization.",
+        "Planned time for fun activities."
+      ]
+    },
+    {
+      name: "Camp Out",
+      lead: "Planned and took a 1- to 2-night camping trip.",
+      more: [
+        "Took more responsibility for planning.",
+        "Learned and practiced a new outdoor skill.",
+        "Learned a new outdoor cooking skill.",
+        "Planned a food budget, then bought and packed food.",
+        "Practiced campsite set up.",
+        "Planned an agenda that included fun activities.",
+        "Explored and protected the surrounding environment."
+      ]
+    },
+    {
+      name: "Adventure Out",
+      lead: "Planned and took an outdoor trip for several days.",
+      more: [
+        "Learned and practiced a new outdoor skill.",
+        "Learned a new outdoor cooking skill.",
+        "Developed first-aid skills and used safety check points.",
+        "Budgeted, scheduled, and made arrangements.",
+        "Participated in an environmental service project.",
+        "Taught and inspired others about the outdoors.",
+        "Imagined new experiences to be had outdoors.",
+        "Practiced all Leave No Trace principles."
+      ]
+    }
+  ];
+
+
+  /* ---- Build the list ---------------------------------------------- */
+
+  var stepsEl = document.getElementById("steps");
+  var selected = null;   // step number (0 = Starting Out), or null
+  var jfReady = false;
+
+  function valueFor(n) {
+    return n == null ? "" : n + " - " + STEPS[n].name;
+  }
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  STEPS.forEach(function (step, i) {
+    var n = i;
+    var row = el("div", "step");
+    row.dataset.n = n;
+
+    var input = el("input", "visually-hidden");
+    input.type = "radio";
+    input.name = "progression-step";
+    input.id = "step-" + n;
+    input.value = valueFor(n);
+    input.addEventListener("change", function () { select(n, true); });
+
+    var label = el("label");
+    label.htmlFor = input.id;
+
+    var blaze = el("span", "blaze", String(n));
+    blaze.setAttribute("aria-hidden", "true");
+
+    var text = el("span", "text");
+    var name = el("span", "name");
+    name.appendChild(el("span", "visually-hidden", "Step " + n + ": "));
+    name.appendChild(document.createTextNode(step.name));
+    text.appendChild(name);
+    text.appendChild(el("span", "lead", step.lead));
+
+    label.appendChild(blaze);
+    label.appendChild(text);
+
+    row.appendChild(input);
+    row.appendChild(label);
+
+    if (step.more && step.more.length) {
+      var details = el("div", "details");
+      var inner = el("div", "details-inner");
+      var list = el("ul");
+      list.setAttribute("aria-label", step.name + " also covers");
+      step.more.forEach(function (item) { list.appendChild(el("li", null, item)); });
+      inner.appendChild(list);
+      details.appendChild(inner);
+      row.appendChild(details);
+    }
+    stepsEl.appendChild(row);
+  });
+
+  /* ---- Selection ---------------------------------------------------- */
+
+  function select(n, notify) {
+    selected = n;
+    var rows = stepsEl.children;
+    for (var i = 0; i < rows.length; i++) {
+      var rowN = i;
+      rows[i].classList.toggle("is-selected", rowN === n);
+      rows[i].classList.toggle("is-covered", n != null && rowN < n);
+      rows[i].querySelector("input").checked = rowN === n;
+    }
+    if (notify && jfReady) {
+      JFCustomWidget.sendData({ value: valueFor(n) });
+    }
+  }
+
+  /* ---- Keep the Jotform iframe the same height as the content ------ */
+
+  var resizeQueued = false;
+  function fitFrame() {
+    if (!jfReady || resizeQueued) return;
+    resizeQueued = true;
+    requestAnimationFrame(function () {
+      resizeQueued = false;
+      var h = Math.ceil(document.getElementById("trail").getBoundingClientRect().height) + 4;
+      JFCustomWidget.requestFrameResize({ height: h });
+    });
+  }
+
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(fitFrame).observe(document.getElementById("trail"));
+  } else {
+    window.addEventListener("resize", fitFrame);
+    stepsEl.addEventListener("transitionend", fitFrame);
+    stepsEl.addEventListener("change", function () { setTimeout(fitFrame, 250); });
+  }
+
+  /* ---- Jotform bridge ----------------------------------------------- */
+
+  if (window.JFCustomWidget) {
+    JFCustomWidget.subscribe("ready", function (data) {
+      jfReady = true;
+
+      // Restore a saved answer when a submission is edited ("4 - Explore Out")
+      var saved = data && data.value ? parseInt(data.value, 10) : NaN;
+      if (saved >= 0 && saved < STEPS.length) select(saved, false);
+
+      fitFrame();
+
+      JFCustomWidget.subscribe("submit", function () {
+        // Jotform shows its own "required" message when valid is false
+        JFCustomWidget.sendSubmit({ valid: selected != null, value: valueFor(selected) });
+      });
+    });
+  }
+</script>
+</body>
+</html>
